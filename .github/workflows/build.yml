@@ -1,0 +1,60 @@
+name: Build Android AAB
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 17
+
+      - name: Install Dependencies & Build Web
+        run: |
+          npm install
+          npm run build --if-present
+
+      - name: Setup Capacitor Android
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          if [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.ts ]; then
+            npx cap init "Jyotishi Live" com.jyotishi.live --web-dir dist
+          fi
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
+          npx cap sync android
+
+      - name: Create Keystore & Build Signed AAB
+        run: |
+          keytool -genkey -v -keystore release.jks -alias jyotishi -keyalg RSA -keysize 2048 -validity 10000 -storepass password123 -keypass password123 -dname "CN=Jyotishi, OU=App, O=Jyotishi, L=Delhi, S=Delhi, C=IN"
+          cd android
+          chmod +x gradlew
+          ./gradlew bundleRelease
+          cd ..
+          AAB_PATH=$(find android/app/build/outputs/bundle/release/ -name "*.aab" | head -n 1)
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore release.jks -storepass password123 -keypass password123 "$AAB_PATH" jyotishi
+          mkdir -p output
+          cp "$AAB_PATH" output/app-release.aab
+          cp release.jks output/release.jks
+
+      - name: Upload Signed AAB and Keystore
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jyotishi-Release-Files
+          path: output/*
+          
