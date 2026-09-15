@@ -1,0 +1,6 @@
+{
+  "name": "Jyotishi Live",
+  "description": "Astrotalk-inspired Vedic astrology platform offering live chat and video consultations with verified astrologers, positive Virtual Pandit Ji guidance, personalized Kundali analysis, wallet, and subscription plans.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
